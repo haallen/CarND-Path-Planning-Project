@@ -1,5 +1,20 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
+
+### Reflection
+I used the provided code (main.cpp) and incorporated the very helpful instruction from the project walkthrough video. My additions to main.cpp can be found starting around line 204 to line 432.
+
+My code has 3 main sections: 1.) Evaluating the current state of the environment; 2.) determining what to do next; and 3.) calculating an optimal trajectory
+
+In evaluating the current environment (lines 277 - 323), all of the other cars on the road are inspected to see if there are any close by to our vehicle. 'Closeness' is determined by the distance in s-coordinate from that car to our car; if less than 30m, then the vehicle is considered to be close by. The lane of the nearby vehicles is then calculated and stored as coarse flags (e.g. "there's a car to your right") for the behavior section. 
+
+In the behavior evaluation (lines 324 - 336), if there is a car in front of our car, then we check to see if it is possible to change lanes. This is done by looking at the flags set in the previous section to see if there's an open lane. If an adjacent lane is open, then a trajectory to that lane will be planned. If a lane is not open, then the vehicle will decelerate smoothly and stay in lane. 
+
+The final step is to generate a trajectory based on the decided behavior. My code (lines 338 - 432) is heavily derived from the code walkthrough. A smooth trajectory is generated from previous path points and predicted waypoints by using the spline function. The car's speed is based on the flags set in the behavior section.
+
+The car's behavior is a basic finite state machine where the state of the car (current lane and acceleration) transitions to other finite states based on changes in the external environment. As my car currently makes it around the track without incident, I felt that cost fuctions were not needed, but would interesting to return to if/when I have more time. 
+
+# Provided instructions
    
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
