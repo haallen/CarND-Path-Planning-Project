@@ -283,20 +283,6 @@ int main() {
           	for (int i=0; i<sensor_fusion.size(); i++){
           		float d = sensor_fusion[i][6];
 
-          		//use d to determine which lane the other car is in
-      			int other_lane = -1;
-      			if (d>0 && d<4){
-      				other_lane = 0;
-      			} else if (d>4 && d<8){
-      				other_lane = 1;
-      			}else if (d>8 && d<12){
-      				other_lane = 2;
-      			}
-
-      			if (other_lane < 0){
-      				continue;
-      			}
-
       			double vx = sensor_fusion[i][3];
       			double vy = sensor_fusion[i][4];
       			double check_speed = sqrt(vx*vx+vy*vy);//speed of the car
@@ -309,6 +295,19 @@ int main() {
 
       			//if the other car is within 30m of me, set a flag to indicate so
       			if (car_dist < 30){
+              		//use d to determine which lane the other car is in
+          			int other_lane = -1;
+          			if (d>0 && d<4){
+          				other_lane = 0;
+          			} else if (d>4 && d<8){
+          				other_lane = 1;
+          			}else if (d>8 && d<12){
+          				other_lane = 2;
+          			}
+
+          			if (other_lane < 0){
+          				continue;
+          			}
       				if (other_lane == lane){
       					//if the car is in my lane, only really care if it is in front of me
       					if (check_car_s > car_s){
