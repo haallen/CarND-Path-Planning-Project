@@ -274,14 +274,16 @@ int main() {
           		}
           	}
           	*/
-          	//double total_cost = 1000000.0;
-          	//int temp_lane = lane;
+          	//flags to indicate the positions of other cars relative to me
           	bool car_left = false;
           	bool car_right = false;
           	bool car_front = false;
+
+          	//loop over all cars in the road
           	for (int i=0; i<sensor_fusion.size(); i++){
           		float d = sensor_fusion[i][6];
 
+          		//use d to determine which lane the other car is in
       			int other_lane = -1;
       			if (d>0 && d<4){
       				other_lane = 0;
@@ -299,11 +301,16 @@ int main() {
       			double vy = sensor_fusion[i][4];
       			double check_speed = sqrt(vx*vx+vy*vy);//speed of the car
       			double check_car_s = sensor_fusion[i][5];
+      			//if using previous path points, project the s value outwards in time (look to see where car will be in the future)
       			check_car_s+=((double)prev_size*0.02*check_speed);
 
+      			//calculate the distance in s between the other car and myself
       			double car_dist = abs(car_s - check_car_s);
+
+      			//if the other car is within 30m of me, set a flag to indicate so
       			if (car_dist < 30){
       				if (other_lane == lane){
+      					//if the car is in my lane, only really care if it is in front of me
       					if (check_car_s > car_s){
       						car_front = true;
       					}
@@ -313,26 +320,17 @@ int main() {
       					car_left = true;
       				}
       			}
-
-      			/*
-      			cout<<"other_lane "<<other_lane<<endl;
-      			double cur_cost_speed = (49.5-check_speed)/49.5;
-      			cout<<"cur_cost_speed "<<cur_cost_speed<<endl;
-      			double cur_cost_lane  = 1-exp(-1*(abs(temp_lane-other_lane)/abs(car_s - check_car_s)));
-      			cout<<"cur_cost_lane "<<cur_cost_lane<<endl;
-
-      			double cur_total_cost = cur_cost_speed + cur_cost_lane;
-      			if (cur_total_cost<total_cost){
-      				total_cost = cur_total_cost;
-      				lane = other_lane;
-      			}
-      			*/
           	}
+
+          	//if there is a car in front of me, evaluate lane change options
           	if (car_front){
+          		//see if going left is an option
           		if (!car_left && lane > 0){
           			lane = lane -1;
+          		//see if going right is an option
           		}else if (!car_right && lane < 2){
           			lane = lane +1;
+          		//if no good lane change options, just decrease speed (by setting this flag)
           		}else{
           			too_close = true;
           		}
