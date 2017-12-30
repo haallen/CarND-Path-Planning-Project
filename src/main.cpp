@@ -202,7 +202,7 @@ int main() {
   }
 
   int lane = 1;
-  double ref_vel = 49.5;
+  double ref_vel = 0;
 
   h.onMessage([&ref_vel,&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy,&lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
@@ -242,6 +242,101 @@ int main() {
           	auto sensor_fusion = j[1]["sensor_fusion"];
 
           	int prev_size = previous_path_x.size();
+
+          	if (prev_size>0){
+          		//use the previous path point, if available
+          		car_s = end_path_s;
+          	}
+
+          	bool too_close = false;
+
+          	//find ref_v to use
+          	//loop over all cars in the road
+          	/*
+          	for (int i=0; i<sensor_fusion.size(); i++){
+          		//determine if the car is in my lane
+          		float d = sensor_fusion[i][6];
+          		if (d<(2+4*lane+2) && d>(2+4*lane-2)){
+          			double vx = sensor_fusion[i][3];
+          			double vy = sensor_fusion[i][4];
+          			double check_speed = sqrt(vx*vx+vy*vy);//speed of the car
+          			double check_car_s = sensor_fusion[i][5];
+
+          			//if using previous path points, project the s value outwards in time (look to see where car will be in the future)
+          			check_car_s+=((double)prev_size*0.02*check_speed);
+
+          			//see if our car's s coordinate is close to the other car's s coordinate
+          			//if the other car is in front of us by less than a predetermined amount (30m), then take action
+          			if ((check_car_s > car_s) && ((check_car_s-car_s)<30)){
+
+          				too_close = true;
+          			}
+          		}
+          	}
+          	*/
+          	//double total_cost = 1000000.0;
+          	//int temp_lane = lane;
+          	bool car_left = false;
+          	bool car_right = false;
+          	bool car_front = false;
+          	for (int i=0; i<sensor_fusion.size(); i++){
+          		float d = sensor_fusion[i][6];
+
+      			int other_lane = -1;
+      			if (d>0 && d<4){
+      				other_lane = 0;
+      			} else if (d>4 && d<8){
+      				other_lane = 1;
+      			}else if (d>8 && d<12){
+      				other_lane = 2;
+      			}
+
+      			if (other_lane < 0){
+      				continue;
+      			}
+
+      			double vx = sensor_fusion[i][3];
+      			double vy = sensor_fusion[i][4];
+      			double check_speed = sqrt(vx*vx+vy*vy);//speed of the car
+      			double check_car_s = sensor_fusion[i][5];
+      			check_car_s+=((double)prev_size*0.02*check_speed);
+
+      			double car_dist = abs(car_s - check_car_s);
+      			if (car_dist < 30){
+      				if (other_lane == lane){
+      					if (check_car_s > car_s){
+      						car_front = true;
+      					}
+      				}else if (other_lane - lane == 1){
+      					car_right = true;
+      				}else if (other_lane - lane == -1){
+      					car_left = true;
+      				}
+      			}
+
+      			/*
+      			cout<<"other_lane "<<other_lane<<endl;
+      			double cur_cost_speed = (49.5-check_speed)/49.5;
+      			cout<<"cur_cost_speed "<<cur_cost_speed<<endl;
+      			double cur_cost_lane  = 1-exp(-1*(abs(temp_lane-other_lane)/abs(car_s - check_car_s)));
+      			cout<<"cur_cost_lane "<<cur_cost_lane<<endl;
+
+      			double cur_total_cost = cur_cost_speed + cur_cost_lane;
+      			if (cur_total_cost<total_cost){
+      				total_cost = cur_total_cost;
+      				lane = other_lane;
+      			}
+      			*/
+          	}
+          	if (car_front){
+          		if (!car_left && lane > 0){
+          			lane = lane -1;
+          		}else if (!car_right && lane < 2){
+          			lane = lane +1;
+          		}else{
+          			too_close = true;
+          		}
+          	}
 
           	vector<double> ptsx;
           	vector<double> ptsy;
@@ -286,7 +381,6 @@ int main() {
           	ptsy.push_back(next_wp1[1]);
           	ptsy.push_back(next_wp2[1]);
 
-
           	for (int i=0; i<ptsx.size(); i++){
           		double shift_x = ptsx[i]-ref_x;
           		double shift_y = ptsy[i]-ref_y;
@@ -313,7 +407,13 @@ int main() {
           	double x_add_on = 0;
 
           	for(int i=1; i<=50-previous_path_x.size();i++){
-
+              	if (too_close){
+              		ref_vel -= 0.224; //if too close to another car in your lane, decelerate by 5 m/s^2
+              	}
+              	else if (ref_vel < 49.5)
+              	{
+              		ref_vel += 0.224; //if below reference speed, accelerate by 5 m/s^2
+              	}
           		double N = target_dist/(0.02*ref_vel/2.24);
           		double x_point = x_add_on+target_x/N;
           		double y_point = s(x_point);
